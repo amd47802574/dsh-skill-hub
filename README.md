@@ -35,6 +35,12 @@
 - Same-name conflicts are listed and only overwritten when you opt in. 同名冲突会列出来，勾选「覆盖同名」才会覆盖。
 - Installed skills land in `~/.dsh/skills` and appear immediately. 导入即装进 DSH 用户技能目录，立刻可见。
 
+**Delete / 删除**
+
+- Skills installed in `~/.dsh/skills` (source `user-dsh`) can be deleted from the detail view, with a confirmation dialog. 详情区可为用户技能目录里的技能执行删除，带确认弹窗。
+- Deletion is a **move to the trash** (`~/.dsh/skills/.trash/`), never a hard delete — nothing is lost by a misclick, and both skill providers ignore the trash directory. 删除是**移入回收站**，永不物理删除，误点不丢数据。
+- Skills from other sources (bundled, other agent ecologies) are read-only and show no delete button. 其他来源（内置、其他 agent 生态）只读，不显示删除按钮。
+
 **Honest list / 可信列表**
 
 - Non-DSH skill sources (the generic `.agents/skills` ecologies: Claude Code, Codex, WorkBuddy, CC Switch, …) and read-only bundled skills are hidden by default, with a count of what was hidden. 默认隐藏其他 agent 生态来源与只读内置技能，并显示隐藏数量。

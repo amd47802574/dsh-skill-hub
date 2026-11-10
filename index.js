@@ -15,7 +15,7 @@
 // them automatically. Services are resolved lazily so the plugin loads on any
 // profile and reports a clear JSON failure instead of breaking the boot when
 // one is absent.
-import { cp, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { cp, mkdir, mkdtemp, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { basename, dirname, join, normalize, resolve, sep } from 'node:path'
@@ -366,6 +366,20 @@ export function apply(ctx, config = {}) {
   })
 
   conn.fetch.register({
+    path: '/api/dsh-skill-hub.delete',
+    methods: ['POST'],
+    requestBody: 'buffered',
+    fetch: async (request) => {
+      try {
+        const body = await readJsonBody(request)
+        return json(await deleteSkill(body, ctx))
+      } catch (error) {
+        return errorResponse(error)
+      }
+    },
+  })
+
+  conn.fetch.register({
     path: '/api/dsh-skill-hub.importFolder',
     methods: ['POST'],
     requestBody: 'buffered',
@@ -459,6 +473,56 @@ export function apply(ctx, config = {}) {
   const handle = setInterval(tick, 5000)
   handle.unref?.()
   if (ownsEffect) ctx.effect(() => () => clearInterval(handle), 'dsh-skill-hub: deferred registration')
+}
+
+// --- delete ------------------------------------------------------------------
+
+/**
+ * Remove one skill from the user skills root by moving it into the root's
+ * `.trash/` (recoverable; both skill providers ignore dot directories, so the
+ * trash never shows up as skills). Only entries inside `~/.dsh/skills` are
+ * deletable: the name is matched against entry names and declared names.
+ */
+async function deleteSkill(body, ctx) {
+  const name = typeof body.name === 'string' ? body.name.trim() : ''
+  if (!KEBAB_NAME.test(name)) throw new RouteError(400, 'invalid', 'the name field must be a kebab-case skill name')
+
+  const root = dshSkillsRoot()
+  let entries
+  try {
+    entries = await readdir(root, { withFileTypes: true })
+  } catch {
+    throw new RouteError(404, 'not-found', `no skill named "${name}" is installed in the user skills root`)
+  }
+
+  let victim
+  for (const entry of entries) {
+    if (entry.name === '.git' || entry.name === 'node_modules' || entry.name.startsWith('.')) continue
+    const isDir = entry.isDirectory()
+    const isFlatMd = entry.isFile() && entry.name.toLowerCase().endsWith('.md') && entry.name.toLowerCase() !== SKILL_ENTRY.toLowerCase()
+    if (!isDir && !isFlatMd) continue
+    if (entry.name === name) {
+      victim = entry
+      break
+    }
+    const docPath = isDir ? join(root, entry.name, SKILL_ENTRY) : join(root, entry.name)
+    const parsed = await parseSkillMarkdown(docPath)
+    const declared = typeof parsed?.fields?.name === 'string' ? parsed.fields.name.trim() : ''
+    if (declared !== '' && (declared === name || toKebabName(declared) === name)) {
+      victim = entry
+      break
+    }
+  }
+  if (victim === undefined) {
+    throw new RouteError(404, 'not-found', `no skill named "${name}" is installed in the user skills root; only skills in ~/.dsh/skills can be deleted`)
+  }
+
+  const trash = join(root, '.trash')
+  await mkdir(trash, { recursive: true })
+  const destination = join(trash, `${Date.now()}-${victim.name}`)
+  await rename(join(root, victim.name), destination)
+  touchRegistry(requireSkills(ctx))
+  return { ok: true, removed: victim.name, trashedTo: destination }
 }
 
 export default { apply }

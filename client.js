@@ -48,6 +48,12 @@ window.__ModuleLoader__.load({
       'action.refreshing': '刷新中…',
       'action.close': '收起详情',
       'action.import': '导入',
+      'action.delete': '删除',
+      'delete.title': '删除技能',
+      'delete.body': '把技能「{name}」从用户技能目录移入回收站（~/.dsh/skills/.trash）？该技能将立即从列表中消失。',
+      'delete.busy': '正在删除…',
+      'delete.done': '已删除「{name}」，已移入回收站。',
+      'delete.confirm': '确认删除',
       'import.title': '导入技能',
       'import.folderTab': '从文件夹',
       'import.githubTab': '从 GitHub',
@@ -94,6 +100,12 @@ window.__ModuleLoader__.load({
       'action.refreshing': 'Refreshing…',
       'action.close': 'Hide detail',
       'action.import': 'Import',
+      'action.delete': 'Delete',
+      'delete.title': 'Delete skill',
+      'delete.body': "Move the skill \"{name}\" from the user skills root into the trash (~/.dsh/skills/.trash)? It will disappear from the list immediately.",
+      'delete.busy': 'Deleting…',
+      'delete.done': 'Deleted "{name}"; it was moved to the trash.',
+      'delete.confirm': 'Delete',
       'import.title': 'Import skills',
       'import.folderTab': 'From folder',
       'import.githubTab': 'From GitHub',
@@ -153,6 +165,10 @@ window.__ModuleLoader__.load({
       `.skh-badge[data-on="1"]{color:var(--dsw-alias-brand-primary,#247bbf);border-color:var(--dsw-alias-brand-primary,#247bbf)}`,
       `.skh-detail{flex:1;overflow-y:auto;padding:20px 24px;min-width:0}`,
       `.skh-detail-title{margin:0;font-size:16px;font-weight:600;word-break:break-all}`,
+      `.skh-detail-headrow{display:flex;align-items:flex-start;gap:10px}`,
+      `.skh-detail-headrow .skh-detail-title{flex:1}`,
+      `.skh-delete-btn{flex:none;padding:5px 12px;font-size:12px;border:1px solid var(--dsw-alias-state-error-primary,#d54941);border-radius:8px;background:transparent;color:var(--dsw-alias-state-error-primary,#d54941);cursor:pointer}`,
+      `.skh-delete-btn:hover{background:var(--dsw-alias-interactive-bg-hover-danger,rgba(213,73,65,.12))}`,
       `.skh-detail-sub{margin:2px 0 0;font-size:12px;color:var(--dsw-alias-label-tertiary,#8a8f98);word-break:break-all}`,
       `.skh-fields{margin:14px 0 0;display:grid;grid-template-columns:120px minmax(0,1fr);gap:6px 14px;font-size:13px;line-height:19px}`,
       `.skh-field-label{color:var(--dsw-alias-label-tertiary,#8a8f98)}`,
@@ -413,7 +429,7 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function SkillDetail({ dict, name, state }) {
+    function SkillDetail({ dict, name, state, onDelete }) {
       if (name === '') {
         return h('div', { className: 'skh-detail' },
           h('h2', { className: 'skh-detail-title' }, translate(dict, 'detail.title')),
@@ -434,8 +450,14 @@ window.__ModuleLoader__.load({
         : skill.resourceBase?.kind === 'url' ? skill.resourceBase.url
         : skill.resourceBase?.kind === 'opaque' ? skill.resourceBase.description
         : undefined
+      const deletable = skill.source === 'user-dsh'
       return h('div', { className: 'skh-detail' },
-        h('h2', { className: 'skh-detail-title' }, skill.name),
+        h('div', { className: 'skh-detail-headrow' },
+          h('h2', { className: 'skh-detail-title' }, skill.name),
+          deletable ? h('button', {
+            className: 'skh-delete-btn', onClick: () => onDelete(skill),
+            title: translate(dict, 'delete.title'),
+          }, translate(dict, 'action.delete')) : null),
         h('p', { className: 'skh-detail-sub' }, skill.description),
         h('div', { className: 'skh-fields' },
           h(Field, { dict, label: translate(dict, 'field.source'), value: skill.source }),
@@ -546,6 +568,18 @@ window.__ModuleLoader__.load({
               busy ? translate(dict, 'import.busy') : translate(dict, 'import.submit')))))
     }
 
+    function DeleteDialog({ dict, skill, busy, error, onCancel, onConfirm }) {
+      return h('div', { className: 'skh-mask', onClick: (event) => { if (event.target === event.currentTarget && !busy) onCancel() } },
+        h('div', { className: 'skh-modal', role: 'alertdialog', 'aria-modal': 'true', 'aria-label': translate(dict, 'delete.title') },
+          h('h2', null, translate(dict, 'delete.title')),
+          h('p', { className: 'skh-hint' }, translate(dict, 'delete.body', { name: skill.name })),
+          error ? h('p', { className: 'skh-error' }, translate(dict, 'error.generic', { message: error })) : null,
+          h('div', { className: 'skh-actions' },
+            h('button', { className: 'skh-btn', onClick: onCancel, disabled: busy }, translate(dict, 'import.cancel')),
+            h('button', { className: 'skh-btn', 'data-primary': '1', onClick: onConfirm, disabled: busy },
+              busy ? translate(dict, 'delete.busy') : translate(dict, 'delete.confirm')))))
+    }
+
     function SkillHubPanel({ t, pickDirectory }) {
       const [dict, setDict] = useState(t.dictionary)
       useEffect(() => t.subscribe(setDict), [t])
@@ -559,6 +593,9 @@ window.__ModuleLoader__.load({
       const [selected, setSelected] = useState('')
       const [detail, setDetail] = useState({ status: 'idle', skill: null })
       const [importing, setImporting] = useState(false)
+      const [deleting, setDeleting] = useState(null) // { skill } while confirm dialog is open
+      const [deleteBusy, setDeleteBusy] = useState(false)
+      const [deleteError, setDeleteError] = useState(null)
 
       const load = useCallback(async (signal, fresh = false) => {
         setRefreshing(true)
@@ -607,6 +644,31 @@ window.__ModuleLoader__.load({
           || (item.source ?? '').toLowerCase().includes(q))
       }, [items, query])
 
+      const runDelete = async () => {
+        if (deleting === null) return
+        setDeleteBusy(true)
+        setDeleteError(null)
+        try {
+          const response = await fetch(`${API}.delete`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ name: deleting.skill.name }),
+          })
+          const data = await response.json().catch(() => ({}))
+          if (data?.ok !== true) {
+            throw new Error(typeof data?.error === 'string' && data.error !== '' ? data.error : `HTTP ${response.status}`)
+          }
+          setDeleting(null)
+          setSelected('')
+          setDetail({ status: 'idle', skill: null })
+          load(undefined, true)
+        } catch (cause) {
+          setDeleteError(cause instanceof Error ? cause.message : String(cause))
+        } finally {
+          setDeleteBusy(false)
+        }
+      }
+
       return h('div', { className: 'skh-page' },
         h('style', null, CSS),
         h('div', { className: 'skh-head' },
@@ -647,10 +709,18 @@ window.__ModuleLoader__.load({
                 h(Badge, { dict, on: item.userInvocable, label: tr('badge.user') }),
                 item.source !== '' ? h(Badge, { dict, on: false, label: item.source }) : null,
               )))),
-          h(SkillDetail, { dict, name: selected, state: detail }),
+          h(SkillDetail, {
+            dict, name: selected, state: detail,
+            onDelete: (skill) => { setDeleteError(null); setDeleting({ skill }) },
+          }),
           importing ? h(ImportDialog, {
             dict, pickDirectory, onClose: () => setImporting(false),
             onImported: () => load(undefined, true),
+          }) : null,
+          deleting !== null ? h(DeleteDialog, {
+            dict, skill: deleting.skill, busy: deleteBusy, error: deleteError,
+            onCancel: () => { if (!deleteBusy) setDeleting(null) },
+            onConfirm: runDelete,
           }) : null))
     }
 
