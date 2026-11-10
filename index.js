@@ -380,6 +380,20 @@ export function apply(ctx, config = {}) {
   })
 
   conn.fetch.register({
+    path: '/api/dsh-skill-hub.deleteMany',
+    methods: ['POST'],
+    requestBody: 'buffered',
+    fetch: async (request) => {
+      try {
+        const body = await readJsonBody(request)
+        return json(await deleteManySkills(body, ctx))
+      } catch (error) {
+        return errorResponse(error)
+      }
+    },
+  })
+
+  conn.fetch.register({
     path: '/api/dsh-skill-hub.importFolder',
     methods: ['POST'],
     requestBody: 'buffered',
@@ -523,6 +537,39 @@ async function deleteSkill(body, ctx) {
   await rename(join(root, victim.name), destination)
   touchRegistry(requireSkills(ctx))
   return { ok: true, removed: victim.name, trashedTo: destination }
+}
+
+const MAX_BATCH_DELETE = 50
+
+/**
+ * Move many user-root skills to the trash in one request. Each name is
+ * processed independently: one failure never blocks the rest, and every
+ * outcome is reported to the caller.
+ */
+async function deleteManySkills(body, ctx) {
+  const names = Array.isArray(body.names) ? body.names.filter((n) => typeof n === 'string') : []
+  if (names.length === 0) throw new RouteError(400, 'invalid', 'the names field must be a non-empty array of kebab-case skill names')
+  if (names.length > MAX_BATCH_DELETE) {
+    throw new RouteError(400, 'too-many', `at most ${MAX_BATCH_DELETE} skills can be deleted per request`)
+  }
+  const results = []
+  for (const raw of names) {
+    const name = raw.trim()
+    try {
+      const removed = await deleteSkill({ name }, ctx)
+      results.push({ name, ok: true, removed: removed.removed })
+    } catch (error) {
+      results.push({
+        name,
+        ok: false,
+        code: error instanceof RouteError ? error.code : 'internal',
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+  const trashed = results.filter((r) => r.ok).length
+  touchRegistry(requireSkills(ctx))
+  return { ok: true, trashed, failed: results.length - trashed, results }
 }
 
 export default { apply }

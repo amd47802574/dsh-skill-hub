@@ -54,6 +54,18 @@ window.__ModuleLoader__.load({
       'delete.busy': '正在删除…',
       'delete.done': '已删除「{name}」，已移入回收站。',
       'delete.confirm': '确认删除',
+      'action.batch': '批量删除',
+      'action.batchExit': '退出多选',
+      'batch.selected': '已选 {n} 项',
+      'batch.selectAll': '全选',
+      'batch.clear': '取消全选',
+      'batch.delete': '删除所选',
+      'batch.title': '批量删除技能',
+      'batch.body': '把选中的 {n} 个技能移入回收站（~/.dsh/skills/.trash）？',
+      'batch.busy': '正在删除…',
+      'batch.done': '已删除 {n} 个技能，已移入回收站。',
+      'batch.doneEmpty': '没有可删除的技能。',
+      'batch.readonlyTitle': '只读来源不可删除',
       'import.title': '导入技能',
       'import.folderTab': '从文件夹',
       'import.githubTab': '从 GitHub',
@@ -106,6 +118,18 @@ window.__ModuleLoader__.load({
       'delete.busy': 'Deleting…',
       'delete.done': 'Deleted "{name}"; it was moved to the trash.',
       'delete.confirm': 'Delete',
+      'action.batch': 'Batch delete',
+      'action.batchExit': 'Exit selection',
+      'batch.selected': '{n} selected',
+      'batch.selectAll': 'Select all',
+      'batch.clear': 'Clear',
+      'batch.delete': 'Delete selected',
+      'batch.title': 'Batch delete skills',
+      'batch.body': 'Move the {n} selected skills to the trash (~/.dsh/skills/.trash)?',
+      'batch.busy': 'Deleting…',
+      'batch.done': 'Deleted {n} skill(s); moved to the trash.',
+      'batch.doneEmpty': 'No deletable skills.',
+      'batch.readonlyTitle': 'Read-only source cannot be deleted',
       'import.title': 'Import skills',
       'import.folderTab': 'From folder',
       'import.githubTab': 'From GitHub',
@@ -169,6 +193,16 @@ window.__ModuleLoader__.load({
       `.skh-detail-headrow .skh-detail-title{flex:1}`,
       `.skh-delete-btn{flex:none;padding:5px 12px;font-size:12px;border:1px solid var(--dsw-alias-state-error-primary,#d54941);border-radius:8px;background:transparent;color:var(--dsw-alias-state-error-primary,#d54941);cursor:pointer}`,
       `.skh-delete-btn:hover{background:var(--dsw-alias-interactive-bg-hover-danger,rgba(213,73,65,.12))}`,
+      `.skh-batch-btn{flex:none;padding:6px 12px;font-size:13px;border:1px solid var(--dsw-alias-border-l2,rgba(127,127,127,.35));border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary,#5c6068);cursor:pointer}`,
+      `.skh-batch-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.1))}`,
+      `.skh-batch-btn[data-danger="1"]{border-color:var(--dsw-alias-state-error-primary,#d54941);color:var(--dsw-alias-state-error-primary,#d54941)}`,
+      `.skh-batch-btn[data-danger="1"]:hover{background:var(--dsw-alias-interactive-bg-hover-danger,rgba(213,73,65,.12))}`,
+      `.skh-batch-bar{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(127,127,127,.2))}`,
+      `.skh-batch-bar .skh-count{flex:1}`,
+      `.skh-check{flex:none;width:16px;height:16px;accent-color:var(--dsw-alias-brand-primary,#247bbf);cursor:pointer}`,
+      `.skh-check[disabled]{cursor:default;opacity:.45}`,
+      `.skh-name-list{margin:10px 0 0;max-height:180px;overflow-y:auto;border:1px solid var(--dsw-alias-border-l1,rgba(127,127,127,.2));border-radius:8px;padding:8px 12px;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,#5c6068)}`,
+      `.skh-name-list div{padding:1px 0;word-break:break-all}`,
       `.skh-detail-sub{margin:2px 0 0;font-size:12px;color:var(--dsw-alias-label-tertiary,#8a8f98);word-break:break-all}`,
       `.skh-fields{margin:14px 0 0;display:grid;grid-template-columns:120px minmax(0,1fr);gap:6px 14px;font-size:13px;line-height:19px}`,
       `.skh-field-label{color:var(--dsw-alias-label-tertiary,#8a8f98)}`,
@@ -580,6 +614,20 @@ window.__ModuleLoader__.load({
               busy ? translate(dict, 'delete.busy') : translate(dict, 'delete.confirm')))))
     }
 
+    function BatchDialog({ dict, names, busy, error, onCancel, onConfirm }) {
+      return h('div', { className: 'skh-mask', onClick: (event) => { if (event.target === event.currentTarget && !busy) onCancel() } },
+        h('div', { className: 'skh-modal', role: 'alertdialog', 'aria-modal': 'true', 'aria-label': translate(dict, 'batch.title') },
+          h('h2', null, translate(dict, 'batch.title')),
+          h('p', { className: 'skh-hint' }, translate(dict, 'batch.body', { n: names.length })),
+          h('div', { className: 'skh-name-list', 'aria-hidden': true },
+            names.map((name) => h('div', { key: name }, name))),
+          error ? h('p', { className: 'skh-error' }, translate(dict, 'error.generic', { message: error })) : null,
+          h('div', { className: 'skh-actions' },
+            h('button', { className: 'skh-btn', onClick: onCancel, disabled: busy }, translate(dict, 'import.cancel')),
+            h('button', { className: 'skh-btn', 'data-primary': '1', onClick: onConfirm, disabled: busy || names.length === 0 },
+              busy ? translate(dict, 'batch.busy') : translate(dict, 'batch.delete')))))
+    }
+
     function SkillHubPanel({ t, pickDirectory }) {
       const [dict, setDict] = useState(t.dictionary)
       useEffect(() => t.subscribe(setDict), [t])
@@ -596,6 +644,12 @@ window.__ModuleLoader__.load({
       const [deleting, setDeleting] = useState(null) // { skill } while confirm dialog is open
       const [deleteBusy, setDeleteBusy] = useState(false)
       const [deleteError, setDeleteError] = useState(null)
+      const [batchMode, setBatchMode] = useState(false)
+      const [batchNames, setBatchNames] = useState(new Set())
+      const [batchBusy, setBatchBusy] = useState(false)
+      const [batchError, setBatchError] = useState(null)
+      const [batchConfirm, setBatchConfirm] = useState(false) // { names } snapshot
+      const [batchResult, setBatchResult] = useState(null) // { trashed, failed }
 
       const load = useCallback(async (signal, fresh = false) => {
         setRefreshing(true)
@@ -669,6 +723,50 @@ window.__ModuleLoader__.load({
         }
       }
 
+      const exitBatchMode = () => {
+        setBatchMode(false)
+        setBatchNames(new Set())
+        setBatchError(null)
+        setBatchResult(null)
+      }
+
+      const runBatchDelete = async () => {
+        if (batchConfirm === null) return
+        setBatchBusy(true)
+        setBatchError(null)
+        try {
+          const response = await fetch(`${API}.deleteMany`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ names: batchConfirm.names }),
+          })
+          const data = await response.json().catch(() => ({}))
+          if (data?.ok !== true) {
+            throw new Error(typeof data?.error === 'string' && data.error !== '' ? data.error : `HTTP ${response.status}`)
+          }
+          setBatchConfirm(false)
+          setBatchNames(new Set())
+          setBatchMode(false)
+          setSelected('')
+          setDetail({ status: 'idle', skill: null })
+          setBatchResult({ trashed: data.trashed ?? 0, failed: data.failed ?? 0 })
+          load(undefined, true)
+        } catch (cause) {
+          setBatchError(cause instanceof Error ? cause.message : String(cause))
+        } finally {
+          setBatchBusy(false)
+        }
+      }
+
+      const toggleBatchName = (name) => {
+        setBatchNames((current) => {
+          const next = new Set(current)
+          if (next.has(name)) next.delete(name)
+          else next.add(name)
+          return next
+        })
+      }
+
       return h('div', { className: 'skh-page' },
         h('style', null, CSS),
         h('div', { className: 'skh-head' },
@@ -685,11 +783,42 @@ window.__ModuleLoader__.load({
           }),
           h('span', { className: 'skh-count' },
             filtered === null ? '' : tr('list.count', { n: filtered.length })),
+          h('button', {
+            className: 'skh-batch-btn', 'data-danger': batchMode ? '1' : '0',
+            onClick: () => { if (batchMode) exitBatchMode(); else { setBatchMode(true); setBatchResult(null) } },
+          }, batchMode ? tr('action.batchExit') : tr('action.batch')),
           h('button', { className: 'skh-refresh', onClick: () => load(undefined, true), disabled: refreshing },
             refreshing ? tr('action.refreshing') : tr('action.refresh')),
           h('button', { className: 'skh-import-btn', onClick: () => setImporting(true) }, tr('action.import'))),
+        batchMode ? h('div', { className: 'skh-batch-bar' },
+          h('span', { className: 'skh-count' }, tr('batch.selected', { n: batchNames.size })),
+          h('button', {
+            className: 'skh-refresh',
+            onClick: () => {
+              const deletable = (filtered ?? []).filter((item) => item.source === 'user-dsh').map((item) => item.name)
+              const allSelected = deletable.length > 0 && deletable.every((name) => batchNames.has(name))
+              setBatchNames(new Set(allSelected ? [] : deletable))
+            },
+          }, (() => {
+            const deletable = (filtered ?? []).filter((item) => item.source === 'user-dsh').map((item) => item.name)
+            const allSelected = deletable.length > 0 && deletable.every((name) => batchNames.has(name))
+            return allSelected ? tr('batch.clear') : tr('batch.selectAll')
+          })()),
+          h('button', {
+            className: 'skh-batch-btn', 'data-danger': '1',
+            disabled: batchNames.size === 0,
+            style: batchNames.size === 0 ? { opacity: 0.6, cursor: 'default' } : undefined,
+            onClick: () => { setBatchError(null); setBatchConfirm({ names: [...batchNames] }) },
+          }, tr('batch.delete'))) : null,
+        batchResult !== null && !batchMode ? h('div', { className: 'skh-batch-bar' },
+          h('span', { className: 'skh-count skh-result-ok' },
+            batchResult.trashed > 0
+              ? tr('batch.done', { n: batchResult.trashed })
+              : tr('batch.doneEmpty')),
+          batchResult.failed > 0 ? h('span', { className: 'skh-error' }, tr('error.generic', { message: `${batchResult.failed} failed` })) : null,
+          h('button', { className: 'skh-refresh', onClick: () => setBatchResult(null) }, tr('import.close'))) : null,
         h('div', { className: 'skh-body' },
-          h('div', { className: 'skh-list', role: 'listbox', 'aria-label': tr('page.title') },
+          h('div', { className: 'skh-list', role: batchMode ? 'group' : 'listbox', 'aria-label': tr('page.title') },
             error !== null ? h('p', { className: 'skh-error' }, tr('error.generic', { message: error })) : null,
             hidden.count > 0 && hidden.sources.length > 0
               ? h('p', { className: 'skh-note' }, tr('list.filtered', { n: hidden.count, sources: hidden.sources.join(', ') }))
@@ -697,18 +826,46 @@ window.__ModuleLoader__.load({
             error === null && filtered !== null && filtered.length === 0
               ? h('p', { className: 'skh-note' }, items.length === 0 ? tr('list.none') : tr('list.empty'))
               : null,
-            (filtered ?? []).map((item) => h('button', {
-              key: item.name, role: 'option', 'aria-selected': selected === item.name ? 'true' : 'false',
-              className: 'skh-row', 'data-active': selected === item.name ? '1' : '0',
-              onClick: () => setSelected(item.name),
-            },
-              h('span', { className: 'skh-row-name' }, item.name),
-              h('span', { className: 'skh-row-desc' }, item.description),
-              h('span', { className: 'skh-row-meta' },
-                h(Badge, { dict, on: item.modelInvocable, label: tr('badge.model') }),
-                h(Badge, { dict, on: item.userInvocable, label: tr('badge.user') }),
-                item.source !== '' ? h(Badge, { dict, on: false, label: item.source }) : null,
-              )))),
+            (filtered ?? []).map((item) => {
+              if (batchMode) {
+                const deletable = item.source === 'user-dsh'
+                return h('div', {
+                  key: item.name,
+                  className: 'skh-row', 'data-active': batchNames.has(item.name) ? '1' : '0',
+                  role: 'checkbox', 'aria-checked': batchNames.has(item.name) ? 'true' : 'false',
+                  'aria-disabled': deletable ? undefined : 'true',
+                  onClick: () => { if (deletable) toggleBatchName(item.name) },
+                  style: deletable ? undefined : { opacity: 0.55, cursor: 'default' },
+                },
+                  h('span', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+                    h('input', {
+                      type: 'checkbox', className: 'skh-check', checked: batchNames.has(item.name),
+                      disabled: !deletable, readOnly: true,
+                      title: deletable ? undefined : tr('batch.readonlyTitle'),
+                      onChange: () => {},
+                      onClick: (event) => { event.stopPropagation(); if (deletable) toggleBatchName(item.name) },
+                    }),
+                    h('span', { className: 'skh-row-name' }, item.name)),
+                  h('span', { className: 'skh-row-desc' }, item.description),
+                  h('span', { className: 'skh-row-meta' },
+                    h(Badge, { dict, on: item.modelInvocable, label: tr('badge.model') }),
+                    h(Badge, { dict, on: item.userInvocable, label: tr('badge.user') }),
+                    item.source !== '' ? h(Badge, { dict, on: false, label: item.source }) : null,
+                  ))
+              }
+              return h('button', {
+                key: item.name, role: 'option', 'aria-selected': selected === item.name ? 'true' : 'false',
+                className: 'skh-row', 'data-active': selected === item.name ? '1' : '0',
+                onClick: () => setSelected(item.name),
+              },
+                h('span', { className: 'skh-row-name' }, item.name),
+                h('span', { className: 'skh-row-desc' }, item.description),
+                h('span', { className: 'skh-row-meta' },
+                  h(Badge, { dict, on: item.modelInvocable, label: tr('badge.model') }),
+                  h(Badge, { dict, on: item.userInvocable, label: tr('badge.user') }),
+                  item.source !== '' ? h(Badge, { dict, on: false, label: item.source }) : null,
+                ))
+            })),
           h(SkillDetail, {
             dict, name: selected, state: detail,
             onDelete: (skill) => { setDeleteError(null); setDeleting({ skill }) },
@@ -721,6 +878,11 @@ window.__ModuleLoader__.load({
             dict, skill: deleting.skill, busy: deleteBusy, error: deleteError,
             onCancel: () => { if (!deleteBusy) setDeleting(null) },
             onConfirm: runDelete,
+          }) : null,
+          batchConfirm !== null ? h(BatchDialog, {
+            dict, names: batchConfirm.names, busy: batchBusy, error: batchError,
+            onCancel: () => { if (!batchBusy) setBatchConfirm(false) },
+            onConfirm: runBatchDelete,
           }) : null))
     }
 

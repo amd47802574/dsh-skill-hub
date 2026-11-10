@@ -40,6 +40,7 @@
 - Skills installed in `~/.dsh/skills` (source `user-dsh`) can be deleted from the detail view, with a confirmation dialog. 详情区可为用户技能目录里的技能执行删除，带确认弹窗。
 - Deletion is a **move to the trash** (`~/.dsh/skills/.trash/`), never a hard delete — nothing is lost by a misclick, and both skill providers ignore the trash directory. 删除是**移入回收站**，永不物理删除，误点不丢数据。
 - Skills from other sources (bundled, other agent ecologies) are read-only and show no delete button. 其他来源（内置、其他 agent 生态）只读，不显示删除按钮。
+- **Batch delete**: the toolbar enters a multi-select mode — checkboxes on every deletable skill (read-only sources are greyed out), select all / clear, then one confirmation lists every selected name and moves them all to the trash. Per-item outcomes are reported, so a missing skill never blocks the rest. **批量删除**：工具栏进入多选模式，可删技能带复选框（只读来源置灰），支持全选/取消，一次确认列出全部所选名字并统一移入回收站；逐项汇报结果，单个失败不影响其余。
 
 **Honest list / 可信列表**
 
