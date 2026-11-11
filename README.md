@@ -47,7 +47,7 @@
 - Non-DSH skill sources (the generic `.agents/skills` ecologies: Claude Code, Codex, WorkBuddy, CC Switch, …) and read-only bundled skills are hidden by default, with a count of what was hidden. 默认隐藏其他 agent 生态来源与只读内置技能，并显示隐藏数量。
 - A **direct disk scan** of `~/.dsh/skills` fills any gap the host's skill registry leaves open, so a skill installed through any route shows up. 内置对用户技能目录的直接扫描兜底，任何途径装进来的技能都能看到。
 - Respects the skills-manager policy: sources you turned off and skills you disabled stay hidden. 遵循技能管理器的启用/禁用策略。
-- Read-only: the hub never edits or deletes a skill. 只读浏览，不修改、不删除任何技能。
+- Explicit writes only: the hub never modifies anything behind your back — skills are installed only through import (same-name overwrite requires an explicit opt-in), and deletion is a confirmed move to the trash (`~/.dsh/skills/.trash/`); read-only sources are never touched. 所有写操作都是显式的：技能只会经「导入」安装（同名覆盖需勾选确认），删除带确认且只移入回收站（`~/.dsh/skills/.trash/`）；只读来源的技能永不改动。
 
 ## Install / 安装
 
