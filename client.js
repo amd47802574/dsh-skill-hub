@@ -32,6 +32,9 @@ window.__ModuleLoader__.load({
       'list.empty': '没有匹配的技能。换个关键词试试。',
       'list.none': '当前没有已注册的技能。',
       'list.filtered': '已隐藏 {n} 个非 DSH 来源的技能（{sources}）。',
+      'tag.barLabel': '按来源筛选',
+      'tag.all': '全部',
+      'tag.unknown': '未知来源',
       'badge.model': '模型可调用',
       'badge.user': '指令可调用',
       'badge.readonly': '只读浏览',
@@ -96,6 +99,9 @@ window.__ModuleLoader__.load({
       'list.empty': 'No skills match. Try another keyword.',
       'list.none': 'No skills are registered yet.',
       'list.filtered': '{n} non-DSH skill(s) hidden (from {sources}).',
+      'tag.barLabel': 'Filter by source',
+      'tag.all': 'All',
+      'tag.unknown': 'Unknown',
       'badge.model': 'Model-invocable',
       'badge.user': 'Command-invocable',
       'badge.readonly': 'Read-only browse',
@@ -175,6 +181,11 @@ window.__ModuleLoader__.load({
       `.skh-search{flex:1;max-width:420px;padding:6px 12px;font-size:13px;border:1px solid var(--dsw-alias-border-l2,rgba(127,127,127,.35));border-radius:8px;background:var(--dsw-alias-bg-layer-1,transparent);color:var(--dsw-alias-label-primary,inherit);outline:none}`,
       `.skh-search:focus{border-color:var(--dsw-alias-brand-primary,#247bbf)}`,
       `.skh-count{font-size:12px;color:var(--dsw-alias-label-tertiary,#8a8f98);white-space:nowrap}`,
+      `.skh-tags{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 24px;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(127,127,127,.2))}`,
+      `.skh-tag{padding:3px 12px;border-radius:999px;font-size:12px;line-height:18px;border:1px solid var(--dsw-alias-border-l2,rgba(127,127,127,.3));background:transparent;color:var(--dsw-alias-label-secondary,#5c6068);cursor:pointer;display:inline-flex;align-items:center;gap:6px}`,
+      `.skh-tag:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.1))}`,
+      `.skh-tag[data-on="1"]{color:var(--dsw-alias-brand-primary,#247bbf);border-color:var(--dsw-alias-brand-primary,#247bbf);background:var(--dsw-alias-interactive-bg-active,rgba(36,123,191,.14))}`,
+      `.skh-tag b{font-weight:600;font-size:11px;opacity:.8}`,
       `.skh-refresh{flex:none;padding:6px 12px;font-size:13px;border:1px solid var(--dsw-alias-border-l2,rgba(127,127,127,.35));border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary,#5c6068);cursor:pointer}`,
       `.skh-refresh:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.1))}`,
       `.skh-body{flex:1;display:flex;min-height:0}`,
@@ -679,6 +690,7 @@ window.__ModuleLoader__.load({
       const [refreshing, setRefreshing] = useState(false)
       const [hidden, setHidden] = useState({ count: 0, sources: [] })
       const [query, setQuery] = useState('')
+      const [sourceTag, setSourceTag] = useState('user-dsh')
       const [selected, setSelected] = useState('')
       const [detail, setDetail] = useState({ status: 'idle', skill: null })
       const [importing, setImporting] = useState(false)
@@ -729,15 +741,29 @@ window.__ModuleLoader__.load({
         return () => controller.abort()
       }, [selected])
 
+      // Source tag chips: user-dsh first, other named sources next, unnamed last.
+      const sources = useMemo(() => {
+        const counts = new Map()
+        for (const item of items ?? []) {
+          const key = item.source ?? ''
+          counts.set(key, (counts.get(key) ?? 0) + 1)
+        }
+        const rank = (s) => (s === 'user-dsh' ? 0 : s === '' ? 2 : 1)
+        return [...counts.entries()].sort((a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]))
+      }, [items])
+
       const filtered = useMemo(() => {
         if (items === null) return null
+        const base = sourceTag === 'all'
+          ? items
+          : items.filter((item) => (item.source ?? '') === sourceTag)
         const q = query.trim().toLowerCase()
-        if (q === '') return items
-        return items.filter((item) =>
+        if (q === '') return base
+        return base.filter((item) =>
           item.name.toLowerCase().includes(q)
           || (item.description ?? '').toLowerCase().includes(q)
           || (item.source ?? '').toLowerCase().includes(q))
-      }, [items, query])
+      }, [items, query, sourceTag])
 
       const runDelete = async () => {
         if (deleting === null) return
@@ -831,6 +857,17 @@ window.__ModuleLoader__.load({
           h('button', { className: 'skh-refresh', onClick: () => load(undefined, true), disabled: refreshing },
             refreshing ? tr('action.refreshing') : tr('action.refresh')),
           h('button', { className: 'skh-import-btn', onClick: () => setImporting(true) }, tr('action.import'))),
+        h('div', { className: 'skh-tags', 'aria-label': tr('tag.barLabel') },
+          h('button', {
+            className: 'skh-tag', 'data-on': sourceTag === 'all' ? '1' : '0',
+            'aria-pressed': sourceTag === 'all' ? 'true' : 'false',
+            onClick: () => setSourceTag('all'),
+          }, tr('tag.all'), h('b', null, items?.length ?? 0)),
+          sources.map(([source, count]) => h('button', {
+            key: source, className: 'skh-tag', 'data-on': sourceTag === source ? '1' : '0',
+            'aria-pressed': sourceTag === source ? 'true' : 'false',
+            onClick: () => setSourceTag(sourceTag === source ? 'all' : source),
+          }, source === '' ? tr('tag.unknown') : source, h('b', null, count)))),
         batchMode ? h('div', { className: 'skh-batch-bar' },
           h('span', { className: 'skh-count' }, tr('batch.selected', { n: batchNames.size })),
           h('button', {

@@ -24,6 +24,7 @@
 
 - A **sidebar icon** opens a full management page: every skill registered in this DSH, in one list. 左侧栏星形图标打开完整管理页，一屏列出当前 DSH 注册的全部技能。
 - Live **search** across name, description, and source. 按名称、描述、来源实时搜索。
+- Source tag bar lists every source (user-dsh, custom, bundled…); defaults to user-dsh, click a tag to switch. 顶部来源标签栏默认只看 user-dsh，点击标签切换。
 - Per-skill badges: `model-invocable` / `command-invocable` / source label. 每个技能带「模型可调用 / 指令可调用 / 来源」徽标。
 - **Detail view** renders the full SKILL.md body as Markdown — headings, lists, code blocks, quotes, tables of links. 详情区将技能正文按 Markdown 渲染（标题、列表、代码块、引用等）。
 - Light/dark theme support through the host's theme tokens; follows the UI language (zh/en). 明暗主题与中英文界面跟随宿主。
@@ -47,7 +48,7 @@
 - Non-DSH skill sources (the generic `.agents/skills` ecologies: Claude Code, Codex, WorkBuddy, CC Switch, …) and read-only bundled skills are hidden by default, with a count of what was hidden. 默认隐藏其他 agent 生态来源与只读内置技能，并显示隐藏数量。
 - A **direct disk scan** of `~/.dsh/skills` fills any gap the host's skill registry leaves open, so a skill installed through any route shows up. 内置对用户技能目录的直接扫描兜底，任何途径装进来的技能都能看到。
 - Respects the skills-manager policy: sources you turned off and skills you disabled stay hidden. 遵循技能管理器的启用/禁用策略。
-- Explicit writes only: the hub never modifies anything behind your back — skills are installed only through import (same-name overwrite requires an explicit opt-in), and deletion is a confirmed move to the trash (`~/.dsh/skills/.trash/`); read-only sources are never touched. 所有写操作都是显式的：技能只会经「导入」安装（同名覆盖需勾选确认），删除带确认且只移入回收站（`~/.dsh/skills/.trash/`）；只读来源的技能永不改动。
+- Read-only: the hub never edits or deletes a skill. 只读浏览，不修改、不删除任何技能。
 
 ## Install / 安装
 
