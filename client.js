@@ -51,6 +51,10 @@ window.__ModuleLoader__.load({
       'action.refreshing': '刷新中…',
       'action.close': '收起详情',
       'action.import': '导入',
+      'action.openFolder': '打开技能目录',
+      'open.folder.busy': '打开中…',
+      'open.folder.done': '已在本机文件管理器中打开技能目录（~/.dsh/skills）。',
+      'open.folder.error': '打开技能目录失败：{message}',
       'action.delete': '删除',
       'delete.title': '删除技能',
       'delete.body': '把技能「{name}」从用户技能目录移入回收站（~/.dsh/skills/.trash）？该技能将立即从列表中消失。',
@@ -118,6 +122,10 @@ window.__ModuleLoader__.load({
       'action.refreshing': 'Refreshing…',
       'action.close': 'Hide detail',
       'action.import': 'Import',
+      'action.openFolder': 'Open skills folder',
+      'open.folder.busy': 'Opening…',
+      'open.folder.done': 'Opened the skills folder (~/.dsh/skills) in your file manager.',
+      'open.folder.error': 'Failed to open the skills folder: {message}',
       'action.delete': 'Delete',
       'delete.title': 'Delete skill',
       'delete.body': "Move the skill \"{name}\" from the user skills root into the trash (~/.dsh/skills/.trash)? It will disappear from the list immediately.",
@@ -703,6 +711,8 @@ window.__ModuleLoader__.load({
       const [batchError, setBatchError] = useState(null)
       const [batchConfirm, setBatchConfirm] = useState(null) // { names } snapshot while confirm dialog is open
       const [batchResult, setBatchResult] = useState(null) // { trashed, failed }
+      const [folderBusy, setFolderBusy] = useState(false)
+      const [folderMsg, setFolderMsg] = useState(null) // { ok, text }
 
       const load = useCallback(async (signal, fresh = false) => {
         setRefreshing(true)
@@ -834,6 +844,27 @@ window.__ModuleLoader__.load({
         })
       }
 
+      const openFolder = useCallback(async () => {
+        setFolderMsg(null)
+        setFolderBusy(true)
+        try {
+          const response = await fetch(`${API}.openFolder`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: '{}',
+          })
+          const body = await response.json().catch(() => ({}))
+          if (body?.ok !== true) {
+            throw new Error(typeof body?.error === 'string' && body.error !== '' ? body.error : `HTTP ${response.status}`)
+          }
+          setFolderMsg({ ok: true, text: tr('open.folder.done') })
+        } catch (cause) {
+          setFolderMsg({ ok: false, text: tr('open.folder.error', { message: cause instanceof Error ? cause.message : String(cause) }) })
+        } finally {
+          setFolderBusy(false)
+        }
+      }, [tr])
+
       return h('div', { className: 'skh-page' },
         h('style', null, CSS),
         h('div', { className: 'skh-head' },
@@ -856,7 +887,11 @@ window.__ModuleLoader__.load({
           }, batchMode ? tr('action.batchExit') : tr('action.batch')),
           h('button', { className: 'skh-refresh', onClick: () => load(undefined, true), disabled: refreshing },
             refreshing ? tr('action.refreshing') : tr('action.refresh')),
+          h('button', {
+            className: 'skh-refresh', onClick: openFolder, disabled: folderBusy,
+          }, folderBusy ? tr('open.folder.busy') : tr('action.openFolder')),
           h('button', { className: 'skh-import-btn', onClick: () => setImporting(true) }, tr('action.import'))),
+        folderMsg !== null ? h('div', { className: 'skh-note', style: { padding: '8px 24px 0' } }, folderMsg.text) : null,
         h('div', { className: 'skh-tags', 'aria-label': tr('tag.barLabel') },
           h('button', {
             className: 'skh-tag', 'data-on': sourceTag === 'all' ? '1' : '0',

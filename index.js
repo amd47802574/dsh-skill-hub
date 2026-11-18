@@ -8,6 +8,7 @@
 //   GET  /api/dsh-skill-hub.detail?name=x   -> { ok, skill: Definition } | 404
 //   POST /api/dsh-skill-hub.importFolder    -> install skills from a local folder
 //   POST /api/dsh-skill-hub.importGithub    -> install skills from a GitHub repo
+//   POST /api/dsh-skill-hub.openFolder      -> open the user skills root in the OS file manager
 //
 // Skill data comes from the host `skills` service (`ctx.get('skills')`) at
 // call time; imports write into the DSH user skills root (`$DSH_HOME/skills`,
@@ -16,6 +17,7 @@
 // profile and reports a clear JSON failure instead of breaking the boot when
 // one is absent.
 import { cp, mkdir, mkdtemp, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { basename, dirname, join, normalize, resolve, sep } from 'node:path'
@@ -438,6 +440,20 @@ export function apply(ctx, config = {}) {
       }
     },
   })
+
+  conn.fetch.register({
+    path: '/api/dsh-skill-hub.openFolder',
+    methods: ['POST'],
+    requestBody: 'buffered',
+    fetch: async (request) => {
+      void request
+      try {
+        return json(await openSkillsFolder())
+      } catch (error) {
+        return errorResponse(error)
+      }
+    },
+  })
   }
 
   // apply must never throw: a thrown fiber shows up as "Failed to load
@@ -487,6 +503,39 @@ export function apply(ctx, config = {}) {
   const handle = setInterval(tick, 5000)
   handle.unref?.()
   if (ownsEffect) ctx.effect(() => () => clearInterval(handle), 'dsh-skill-hub: deferred registration')
+}
+
+// --- open folder --------------------------------------------------------------
+
+/**
+ * Open the user skills root in the operating system's file manager. The
+ * directory is created first when missing, so a fresh install still gets a
+ * visible folder. The path is passed to the platform opener as a single
+ * spawn argument (no shell), keeping quoting and escaping out of scope.
+ */
+async function openSkillsFolder() {
+  const root = dshSkillsRoot()
+  await mkdir(root, { recursive: true }).catch((error) => {
+    throw new RouteError(500, 'mkdir', error instanceof Error ? error.message : String(error))
+  })
+  const command = process.platform === 'win32' ? 'explorer' : process.platform === 'darwin' ? 'open' : 'xdg-open'
+  await new Promise((resolvePromise, rejectPromise) => {
+    let child
+    try {
+      child = spawn(command, [root], { detached: true, stdio: 'ignore' })
+    } catch (error) {
+      rejectPromise(new RouteError(500, 'spawn', error instanceof Error ? error.message : String(error)))
+      return
+    }
+    // `explorer` exits non-zero even on success; never trust the exit code.
+    const settle = () => resolvePromise()
+    child.once('error', () => rejectPromise(new RouteError(500, 'spawn', `failed to launch "${command}"`)))
+    child.once('exit', settle)
+    child.unref?.()
+    const fallback = setTimeout(settle, 500)
+    fallback.unref?.()
+  })
+  return { ok: true, path: root }
 }
 
 // --- delete ------------------------------------------------------------------

@@ -43,12 +43,16 @@
 - Skills from other sources (bundled, other agent ecologies) are read-only and show no delete button. 其他来源（内置、其他 agent 生态）只读，不显示删除按钮。
 - **Batch delete**: the toolbar enters a multi-select mode — checkboxes on every deletable skill (read-only sources are greyed out), select all / clear, then one confirmation lists every selected name and moves them all to the trash. Per-item outcomes are reported, so a missing skill never blocks the rest. **批量删除**：工具栏进入多选模式，可删技能带复选框（只读来源置灰），支持全选/取消，一次确认列出全部所选名字并统一移入回收站；逐项汇报结果，单个失败不影响其余。
 
+**Open folder / 打开目录**
+
+- **Open skills folder**: one click opens the user skills root (~/.dsh/skills) in your OS file manager (Explorer / Finder / xdg-open); the folder is created on first use, so you can drop skill folders in by hand. 「打开技能目录」一键在本机文件管理器中打开用户技能根目录 ~/.dsh/skills（不存在时自动创建），方便手动放入技能文件夹。
+
 **Honest list / 可信列表**
 
 - Non-DSH skill sources (the generic `.agents/skills` ecologies: Claude Code, Codex, WorkBuddy, CC Switch, …) and read-only bundled skills are hidden by default, with a count of what was hidden. 默认隐藏其他 agent 生态来源与只读内置技能，并显示隐藏数量。
 - A **direct disk scan** of `~/.dsh/skills` fills any gap the host's skill registry leaves open, so a skill installed through any route shows up. 内置对用户技能目录的直接扫描兜底，任何途径装进来的技能都能看到。
 - Respects the skills-manager policy: sources you turned off and skills you disabled stay hidden. 遵循技能管理器的启用/禁用策略。
-- Read-only: the hub never edits or deletes a skill. 只读浏览，不修改、不删除任何技能。
+- Mutable actions (delete, batch delete) stay limited to the user skills root (user-dsh); every other source is read-only. 可管理动作（删除、批量删除）仅限用户技能目录（user-dsh），其余来源保持只读。
 
 ## Install / 安装
 
@@ -90,6 +94,7 @@ Then restart DSH. 然后重启 DSH。
 2. Search or scroll to find a skill; click one to read its full definition and body. 搜索或滚动找到技能，点击查看完整定义与正文。
 3. Click **导入 (Import)** to install skills from a local folder or a GitHub URL. 点击「导入」从本地文件夹或 GitHub 安装技能。
 4. **刷新 (Refresh)** re-reads the catalog and drops discovery caches, so newly written files show up at once. 「刷新」会重新读取目录并清除发现缓存，新写入的文件立刻出现。
+5. Click **打开技能目录 (Open skills folder)** to reveal the user skills root in your file manager. 点击「打开技能目录」在本机文件管理器中打开用户技能目录。
 
 ### Configuration / 配置
 
@@ -106,7 +111,7 @@ Add fields to the plugin row's `config` in the profile patch to adjust the list:
 
 ## How it works / 工作原理
 
-- **Host half**: reads the host `skills` service and the user skills root, and serves authenticated JSON routes through the connection service (`/api/dsh-skill-hub.*`). 宿主半区读取技能服务与用户技能目录，经连接服务提供认证 JSON 路由。
+- **Host half**: reads the host `skills` service and the user skills root, and serves authenticated JSON routes through the connection service (`/api/dsh-skill-hub.*`, including `openFolder` which launches the platform file manager on the user skills root). 宿主半区读取技能服务与用户技能目录，经连接服务提供认证 JSON 路由（含 openFolder：调用系统文件管理器打开用户技能目录）。
 - **Client half**: a plain-JS bundle registering a `sidebar.panellist` entry (id = the `main` panel key) and the management page. No build step. 浏览器半区为纯 JS bundle，注册侧栏入口与管理面板，无构建步骤。
 - Imports resolve GitHub URLs to codeload tarballs (default branch via the GitHub API), extract with size/entry limits and path-traversal guards, and drop skills into `~/.dsh/skills`. 导入将 GitHub 地址解析为 codeload 压缩包（默认分支经 GitHub API 查询），带大小/条目限制与路径穿越防护，技能落入 `~/.dsh/skills`。
 
@@ -119,11 +124,6 @@ Add fields to the plugin row's `config` in the profile patch to adjust the list:
 
 ```sh
 node --check index.js && node --check client.js   # syntax / 语法检查
-node smoke-host.mjs                               # host routes
-node smoke-client.mjs                             # client registration + markdown
-node smoke-import.mjs                             # import engine
-node smoke-touch.mjs                              # cache invalidation + self-heal
-node smoke-disk.mjs                               # disk fallback scan
 ```
 
 No build step; the browser half is a `window.__ModuleLoader__` bundle. 无构建步骤，浏览器半区是模块加载器 bundle。

@@ -43,12 +43,16 @@
 - 其他来源（内置、其他 agent 生态）只读，不显示删除按钮。
 - **批量删除**：工具栏进入多选模式，可删技能带复选框（只读来源置灰），支持全选/取消，一次确认列出全部所选名字并统一移入回收站；逐项汇报结果，单个失败不影响其余。
 
+**打开目录**
+
+- **打开技能目录**：一键在本机文件管理器（资源管理器 / Finder / xdg-open）中打开用户技能根目录 ~/.dsh/skills，目录不存在时自动创建，方便手动放入技能文件夹。
+
 **可信列表**
 
 - 默认隐藏其他 agent 生态来源（`.agents/skills` 通用生态：Claude Code、Codex、WorkBuddy、CC Switch 等）与只读内置技能，并显示隐藏数量与来源名单。
 - 内置对用户技能目录的**直接扫描兜底**：技能注册表漏报时以磁盘事实补齐，任何途径装进来的技能都能看到。
 - 遵循 `@michengai/dsh-skills-manager`（技能管理器）的启用 / 禁用策略。
-- **只读**：只浏览，不修改、不删除任何技能。
+- 可管理动作（删除、批量删除）仅限用户技能目录（user-dsh 来源），其余来源保持只读。
 
 ## 安装
 
@@ -90,6 +94,7 @@ git clone https://github.com/amd47802574/dsh-skill-hub.git
 2. 搜索或滚动找到技能，点击查看完整定义与正文。
 3. 点击「导入」从本地文件夹或 GitHub 链接安装技能。
 4. 「刷新」会重新读取目录并清除发现缓存，新写入的技能文件立刻出现。
+5. 点击「打开技能目录」在本机文件管理器中打开用户技能根目录。
 
 ### 配置
 
@@ -106,7 +111,7 @@ git clone https://github.com/amd47802574/dsh-skill-hub.git
 
 ## 工作原理
 
-- **宿主半区**：读取宿主 `skills` 服务与用户技能目录，经连接服务提供认证 JSON 路由（`/api/dsh-skill-hub.*`）。
+- **宿主半区**：读取宿主 `skills` 服务与用户技能目录，经连接服务提供认证 JSON 路由（`/api/dsh-skill-hub.*`，含 `openFolder`：调用系统文件管理器打开用户技能目录）。
 - **浏览器半区**：纯 JS bundle，注册 `sidebar.panellist` 入口（id 即 `main` 面板 key）与管理面板，无构建步骤。
 - **导入**：GitHub 地址解析为 codeload 压缩包（默认分支经 GitHub API 查询），tar 解析兼容 pax / GNU 长名头，带大小 / 条目数限制与路径穿越防护，技能落入 `~/.dsh/skills`。
 
@@ -119,11 +124,6 @@ git clone https://github.com/amd47802574/dsh-skill-hub.git
 
 ```sh
 node --check index.js && node --check client.js   # 语法检查
-node smoke-host.mjs                               # 宿主路由
-node smoke-client.mjs                             # 客户端注册 + Markdown
-node smoke-import.mjs                             # 导入引擎
-node smoke-touch.mjs                              # 缓存失效 + 自愈
-node smoke-disk.mjs                               # 磁盘兜底扫描
 ```
 
 无构建步骤，浏览器半区是 `window.__ModuleLoader__` bundle。
