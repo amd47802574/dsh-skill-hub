@@ -124,6 +124,10 @@ Add fields to the plugin row's `config` in the profile patch to adjust the list:
 
 ```sh
 node --check index.js && node --check client.js   # syntax / 语法检查
+
+The smoke scripts (smoke-host / smoke-render / smoke-import / …) live in the
+local dev workspace next to the repo clone and are not shipped with the package.
+冒烟测试脚本放在仓库克隆旁的本地开发目录，不随包发布。
 ```
 
 No build step; the browser half is a `window.__ModuleLoader__` bundle. 无构建步骤，浏览器半区是模块加载器 bundle。

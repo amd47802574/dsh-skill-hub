@@ -124,6 +124,8 @@ git clone https://github.com/amd47802574/dsh-skill-hub.git
 
 ```sh
 node --check index.js && node --check client.js   # 语法检查
+
+冒烟测试脚本（smoke-host / smoke-render / smoke-import 等）放在仓库克隆旁的本地开发目录，不随包发布。
 ```
 
 无构建步骤，浏览器半区是 `window.__ModuleLoader__` bundle。
