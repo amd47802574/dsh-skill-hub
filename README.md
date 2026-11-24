@@ -43,6 +43,13 @@
 - Skills from other sources (bundled, other agent ecologies) are read-only and show no delete button. 其他来源（内置、其他 agent 生态）只读，不显示删除按钮。
 - **Batch delete**: the toolbar enters a multi-select mode — checkboxes on every deletable skill (read-only sources are greyed out), select all / clear, then one confirmation lists every selected name and moves them all to the trash. Per-item outcomes are reported, so a missing skill never blocks the rest. **批量删除**：工具栏进入多选模式，可删技能带复选框（只读来源置灰），支持全选/取消，一次确认列出全部所选名字并统一移入回收站；逐项汇报结果，单个失败不影响其余。
 
+**Recycle bin / 回收站**
+
+- The **Trash** button in the toolbar switches to the recycle-bin view: it lists every entry under `~/.dsh/skills/.trash/` with the original skill name, kind (skill folder / flat skill file), deletion time and description, newest first. 工具栏「回收站」切到回收站视图，列出 `~/.dsh/skills/.trash/` 的全部条目与原技能名、类型、删除时间、描述，新的排前面。
+- **Restore** moves an entry back to `~/.dsh/skills/<original name>`; when the name is taken again the restore reports a conflict and only overwrites after you confirm. **还原**把条目搬回 `~/.dsh/skills/<原技能名>`，同名冲突需先确认覆盖。
+- **Delete forever** purges one entry, and **Empty the recycle bin** purges them all — both behind a confirmation dialog, and one stuck entry never blocks the rest. **彻底删除**与「清空回收站」都有确认弹窗，单条失败不影响其余。
+- Bin entries are path-checked: `../` traversal is rejected. 回收站路径有校验，路径穿越会被拒绝。
+
 **Open folder / 打开目录**
 
 - **Open skills folder**: one click opens the user skills root (~/.dsh/skills) in your OS file manager (Explorer / Finder / xdg-open); the folder is created on first use, so you can drop skill folders in by hand. 「打开技能目录」一键在本机文件管理器中打开用户技能根目录 ~/.dsh/skills（不存在时自动创建），方便手动放入技能文件夹。

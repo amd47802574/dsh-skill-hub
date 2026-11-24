@@ -55,6 +55,33 @@ window.__ModuleLoader__.load({
       'open.folder.busy': '打开中…',
       'open.folder.done': '已在本机文件管理器中打开技能目录（~/.dsh/skills）。',
       'open.folder.error': '打开技能目录失败：{message}',
+      'trash.tab': '回收站',
+      'trash.toolbarTitle': '查看回收站',
+      'trash.title': '回收站',
+      'trash.subtitle': '被删除的技能都暂存在这里（~/.dsh/skills/.trash），可以原样还原。',
+      'trash.empty': '回收站是空的。',
+      'trash.loading': '正在读取回收站…',
+      'trash.count': '{n} 项',
+      'trash.kind.directory': '技能目录',
+      'trash.kind.file': '平铺技能',
+      'trash.declared': '技能名：{name}',
+      'trash.restore': '还原',
+      'trash.restoring': '还原中…',
+      'trash.purge': '彻底删除',
+      'trash.purging': '删除中…',
+      'trash.restore.done': '已还原「{name}」到技能目录。',
+      'trash.restore.conflict': '技能目录里已经有同名技能「{name}」。',
+      'trash.overwrite': '覆盖同名技能',
+      'trash.purge.title': '彻底删除回收站条目',
+      'trash.purge.body': '「{name}」将被永久删除，无法还原。',
+      'trash.purge.confirm': '永久删除',
+      'trash.openFolder': '打开回收站目录',
+      'trash.purgeAll': '清空回收站',
+      'trash.purgeAll.title': '清空回收站',
+      'trash.purgeAll.body': '回收站中的 {n} 个条目将被永久删除，无法还原。',
+      'trash.purgeAll.done': '已清空 {n} 个条目。',
+      'trash.back': '返回技能列表',
+      'trash.stale': '当前运行的主进程还没有回收站接口（旧版本或刚重启）——重启 DeepSeek Harness 后再打开本页即可。',
       'action.delete': '删除',
       'delete.title': '删除技能',
       'delete.body': '把技能「{name}」从用户技能目录移入回收站（~/.dsh/skills/.trash）？该技能将立即从列表中消失。',
@@ -126,6 +153,33 @@ window.__ModuleLoader__.load({
       'open.folder.busy': 'Opening…',
       'open.folder.done': 'Opened the skills folder (~/.dsh/skills) in your file manager.',
       'open.folder.error': 'Failed to open the skills folder: {message}',
+      'trash.tab': 'Trash',
+      'trash.toolbarTitle': 'Open the recycle bin',
+      'trash.title': 'Recycle bin',
+      'trash.subtitle': 'Deleted skills wait here (~/.dsh/skills/.trash) and can be restored as they were.',
+      'trash.empty': 'The recycle bin is empty.',
+      'trash.loading': 'Reading the recycle bin…',
+      'trash.count': '{n} item(s)',
+      'trash.kind.directory': 'Skill folder',
+      'trash.kind.file': 'Flat skill file',
+      'trash.declared': 'Declared name: {name}',
+      'trash.restore': 'Restore',
+      'trash.restoring': 'Restoring…',
+      'trash.purge': 'Delete forever',
+      'trash.purging': 'Deleting…',
+      'trash.restore.done': 'Restored "{name}" into the skills folder.',
+      'trash.restore.conflict': 'A skill named "{name}" already exists in the skills folder.',
+      'trash.overwrite': 'Overwrite the existing skill',
+      'trash.purge.title': 'Delete a recycle-bin entry forever',
+      'trash.purge.body': '"{name}" will be permanently deleted; this cannot be undone.',
+      'trash.purge.confirm': 'Delete forever',
+      'trash.openFolder': 'Open the trash folder',
+      'trash.purgeAll': 'Empty the recycle bin',
+      'trash.purgeAll.title': 'Empty the recycle bin',
+      'trash.purgeAll.body': 'All {n} entries in the recycle bin will be permanently deleted.',
+      'trash.purgeAll.done': 'Emptied {n} entry(ies).',
+      'trash.back': 'Back to skills',
+      'trash.stale': 'The running host has no recycle-bin routes yet (an older build, or a restart in flight) — restart DeepSeek Harness and reopen this page.',
       'action.delete': 'Delete',
       'delete.title': 'Delete skill',
       'delete.body': "Move the skill \"{name}\" from the user skills root into the trash (~/.dsh/skills/.trash)? It will disappear from the list immediately.",
@@ -216,6 +270,15 @@ window.__ModuleLoader__.load({
       `.skh-batch-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.1))}`,
       `.skh-batch-btn[data-danger="1"]{border-color:var(--dsw-alias-state-error-primary,#d54941);color:var(--dsw-alias-state-error-primary,#d54941)}`,
       `.skh-batch-btn[data-danger="1"]:hover{background:var(--dsw-alias-interactive-bg-hover-danger,rgba(213,73,65,.12))}`,
+      `.skh-trash-row{display:flex;align-items:flex-start;gap:12px;padding:12px;border:1px solid var(--dsw-alias-border-l1,rgba(127,127,127,.2));border-radius:10px;background:var(--dsw-alias-bg-layer-1,rgba(127,127,127,.04))}`,
+      `.skh-trash-main{flex:1;min-width:0}`,
+      `.skh-trash-name{margin:0;font-size:14px;font-weight:600;line-height:20px;color:var(--dsw-alias-label-primary,inherit);word-break:break-all}`,
+      `.skh-trash-meta{margin:4px 0 0;font-size:12px;line-height:17px;color:var(--dsw-alias-label-tertiary,#8a8f98);word-break:break-all}`,
+      `.skh-trash-desc{margin:6px 0 0;font-size:12px;line-height:17px;color:var(--dsw-alias-label-secondary,#5c6068)}`,
+      `.skh-trash-actions{flex:none;display:flex;gap:8px;align-items:center}`,
+      `.skh-trash-list{display:flex;flex-direction:column;gap:10px;padding:16px 24px;overflow-y:auto}`,
+      `.skh-trash-head{padding:16px 24px 0;display:flex;align-items:center;gap:10px}`,
+      `.skh-trash-head h2{margin:0;font-size:15px;font-weight:600;flex:1}`,
       `.skh-batch-bar{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(127,127,127,.2))}`,
       `.skh-batch-bar .skh-count{flex:1}`,
       `.skh-check{flex:none;width:16px;height:16px;accent-color:var(--dsw-alias-brand-primary,#247bbf);cursor:pointer}`,
@@ -307,7 +370,10 @@ window.__ModuleLoader__.load({
       const response = await fetch(url, { method: 'GET', signal })
       const body = await response.json().catch(() => ({}))
       if (!response.ok || body?.ok !== true) {
-        throw new Error(typeof body?.error === 'string' && body.error !== '' ? body.error : `HTTP ${response.status}`)
+        const error = new Error(typeof body?.error === 'string' && body.error !== '' ? body.error : `HTTP ${response.status}`)
+        error.status = response.status
+        error.code = typeof body?.code === 'string' ? body.code : undefined
+        throw error
       }
       return body
     }
@@ -688,6 +754,193 @@ window.__ModuleLoader__.load({
               busy ? translate(dict, 'batch.busy') : translate(dict, 'batch.delete')))))
     }
 
+    function TrashRow({ dict, entry, busy, onRestore, onPurge }) {
+      const tr = (key, params) => translate(dict, key, params)
+      const when = (() => {
+        const at = new Date(entry.trashedAt)
+        return Number.isNaN(at.getTime()) ? entry.trashedAt : at.toLocaleString()
+      })()
+      return h('div', { className: 'skh-trash-row' },
+        h('div', { className: 'skh-trash-main' },
+          h('p', { className: 'skh-trash-name' }, entry.name),
+          h('p', { className: 'skh-trash-meta' },
+            entry.kind === 'directory' ? tr('trash.kind.directory') : tr('trash.kind.file'),
+            ' · ', when),
+          entry.declaredName !== undefined
+            ? h('p', { className: 'skh-trash-meta' }, tr('trash.declared', { name: entry.declaredName })) : null,
+          entry.description !== ''
+            ? h('p', { className: 'skh-trash-desc' }, entry.description) : null),
+        h('div', { className: 'skh-trash-actions' },
+          h('button', {
+            className: 'skh-refresh', disabled: busy === entry.entry,
+            onClick: () => onRestore(entry),
+          }, busy === entry.entry ? tr('trash.restoring') : tr('trash.restore')),
+          h('button', {
+            className: 'skh-delete-btn', disabled: busy === entry.entry,
+            onClick: () => onPurge(entry),
+          }, busy === entry.entry ? tr('trash.purging') : tr('trash.purge'))))
+    }
+
+    function TrashView({ dict, onBack }) {
+      const tr = (key, params) => translate(dict, key, params)
+      const [state, setState] = useState({ status: 'loading', entries: [], error: null, stale: false })
+      const [busy, setBusy] = useState('')
+      const [msg, setMsg] = useState(null) // { ok, text }
+      const [purgeTarget, setPurgeTarget] = useState(null) // { entry, name } confirm snapshot
+
+      const load = useCallback(async (signal) => {
+        setState((current) => ({ ...current, status: current.status === 'ready' ? 'ready' : 'loading' }))
+        try {
+          const body = await fetchJson(`${API}.trash`, signal)
+          setState({ status: 'ready', entries: Array.isArray(body.entries) ? body.entries : [], error: null, stale: false })
+        } catch (cause) {
+          if (signal?.aborted) return
+          // A route that is not registered yet (older host half, or a fresh
+          // install mid-restart) answers 400/404; an empty bin with a hint is
+          // more useful than a hard error, and a refresh picks the route up.
+          const status = cause instanceof Error ? cause.status : undefined
+          if (status === 400 || status === 404) {
+            // The host half predates the recycle-bin routes (an older install,
+            // or a restart still in flight). Say so instead of a bare HTTP error.
+            setState({ status: 'ready', entries: [], error: null, stale: true })
+            return
+          }
+          setState({ status: 'error', entries: [], error: cause instanceof Error ? cause.message : String(cause) })
+        }
+      }, [])
+
+      useEffect(() => {
+        const controller = new AbortController()
+        load(controller.signal)
+        return () => controller.abort()
+      }, [load])
+
+      const post = async (route, payload) => {
+        const response = await fetch(`${API}.${route}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        const body = await response.json().catch(() => ({}))
+        return { status: response.status, body }
+      }
+
+      const restore = async (entry, overwrite = false) => {
+        setBusy(entry.entry)
+        setMsg(null)
+        try {
+          const { status, body } = await post('restore', { entry: entry.entry, overwrite })
+          if (body?.ok !== true) {
+            if (status === 409 && !overwrite) {
+              setPurgeTarget(null)
+              setMsg({ ok: false, text: tr('trash.restore.conflict', { name: entry.name }), retry: { entry, mode: 'restore' } })
+              return
+            }
+            throw new Error(typeof body?.error === 'string' && body.error !== '' ? body.error : `HTTP ${status}`)
+          }
+          setMsg({ ok: true, text: tr('trash.restore.done', { name: body.restored ?? entry.name }) })
+          await load(undefined)
+        } catch (cause) {
+          setMsg({ ok: false, text: cause instanceof Error ? cause.message : String(cause) })
+        } finally {
+          setBusy('')
+        }
+      }
+
+      const purge = async (entry) => {
+        setPurgeTarget(null)
+        setBusy(entry.entry)
+        setMsg(null)
+        try {
+          const { status, body } = await post('purge', { entry: entry.entry })
+          if (body?.ok !== true) {
+            throw new Error(typeof body?.error === 'string' && body.error !== '' ? body.error : `HTTP ${status}`)
+          }
+          await load(undefined)
+        } catch (cause) {
+          setMsg({ ok: false, text: cause instanceof Error ? cause.message : String(cause) })
+        } finally {
+          setBusy('')
+        }
+      }
+
+      const purgeAll = async () => {
+        const targets = state.entries.slice()
+        setPurgeTarget(null)
+        let removed = 0
+        for (const entry of targets) {
+          setBusy(entry.entry)
+          try {
+            const { body } = await post('purge', { entry: entry.entry })
+            if (body?.ok === true) removed += 1
+          } catch {
+            // Keep going: one stuck entry must not block emptying the rest.
+          }
+        }
+        setBusy('')
+        await load(undefined)
+        setMsg({ ok: true, text: tr('trash.purgeAll.done', { n: removed }) })
+      }
+
+      const overwriteRetry = () => {
+        if (msg?.retry?.mode !== 'restore') return
+        const entry = msg.retry.entry
+        restore({ ...entry, name: entry.name }, true)
+      }
+
+      return h('div', { className: 'skh-page' },
+        h('div', { className: 'skh-head' },
+          h('div', { className: 'skh-head-row' },
+            h('h1', null, tr('trash.title')),
+            h(GitHubLink, { label: tr('page.github') })),
+          h('p', null, tr('trash.subtitle'))),
+        h('div', { className: 'skh-toolbar' },
+          h('button', { className: 'skh-refresh', onClick: onBack }, tr('trash.back')),
+          h('span', { className: 'skh-count' }, tr('trash.count', { n: state.entries.length })),
+          h('button', {
+            className: 'skh-delete-btn', disabled: state.entries.length === 0 || busy !== '',
+            onClick: () => setPurgeTarget({ all: true }),
+          }, tr('trash.purgeAll'))),
+        msg !== null ? h('div', { className: 'skh-note', style: { padding: '8px 24px 0' } },
+          h('span', { className: msg.ok ? 'skh-result-ok' : 'skh-error' }, msg.text),
+          msg.retry?.mode === 'restore' ? h('button', {
+            className: 'skh-refresh', style: { marginLeft: 10 },
+            onClick: overwriteRetry,
+          }, tr('trash.overwrite')) : null) : null,
+        h('div', { className: 'skh-trash-list' },
+          state.status === 'loading' ? h('p', { className: 'skh-note' }, tr('trash.loading')) : null,
+          state.status === 'error' ? h('p', { className: 'skh-error' }, tr('error.generic', { message: state.error })) : null,
+          state.stale === true
+            ? h('p', { className: 'skh-note' }, tr('trash.stale')) : null,
+          state.status === 'ready' && state.entries.length === 0
+            ? h('p', { className: 'skh-note' }, tr('trash.empty')) : null,
+          state.entries.map((entry) => h(TrashRow, {
+            key: entry.entry, dict, entry, busy,
+            onRestore: restore,
+            onPurge: (row) => setPurgeTarget({ entry: row }),
+          }))),
+        purgeTarget !== null ? h(PurgeDialog, {
+          dict,
+          label: purgeTarget.all === true ? tr('trash.purgeAll.title') : tr('trash.purge.title'),
+          body: purgeTarget.all === true
+            ? tr('trash.purgeAll.body', { n: state.entries.length })
+            : tr('trash.purge.body', { name: purgeTarget.entry?.name ?? '' }),
+          confirmLabel: tr('trash.purge.confirm'),
+          onCancel: () => setPurgeTarget(null),
+          onConfirm: () => (purgeTarget.all === true ? purgeAll() : purge(purgeTarget.entry)),
+        }) : null)
+    }
+
+    function PurgeDialog({ dict, label, body, confirmLabel, onCancel, onConfirm }) {
+      return h('div', { className: 'skh-mask', onClick: (event) => { if (event.target === event.currentTarget) onCancel() } },
+        h('div', { className: 'skh-modal', role: 'alertdialog', 'aria-modal': 'true', 'aria-label': label },
+          h('h2', null, label),
+          h('p', { className: 'skh-hint' }, body),
+          h('div', { className: 'skh-actions' },
+            h('button', { className: 'skh-btn', onClick: onCancel }, dict['import.cancel'] ?? 'Cancel'),
+            h('button', { className: 'skh-btn', 'data-primary': '1', onClick: onConfirm }, confirmLabel))))
+    }
+
     function SkillHubPanel({ t, pickDirectory }) {
       const [dict, setDict] = useState(t.dictionary)
       useEffect(() => t.subscribe(setDict), [t])
@@ -713,6 +966,7 @@ window.__ModuleLoader__.load({
       const [batchResult, setBatchResult] = useState(null) // { trashed, failed }
       const [folderBusy, setFolderBusy] = useState(false)
       const [folderMsg, setFolderMsg] = useState(null) // { ok, text }
+      const [trashView, setTrashView] = useState(false) // recycle-bin view, off by default
 
       const load = useCallback(async (signal, fresh = false) => {
         setRefreshing(true)
@@ -844,6 +1098,14 @@ window.__ModuleLoader__.load({
         })
       }
 
+      const openTrashDir = useCallback(async () => {
+        try {
+          await fetch(`${API}.openFolder`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })
+        } catch {
+          // The folder opener is a convenience; the list above still works.
+        }
+      }, [])
+
       const openFolder = useCallback(async () => {
         setFolderMsg(null)
         setFolderBusy(true)
@@ -864,6 +1126,15 @@ window.__ModuleLoader__.load({
           setFolderBusy(false)
         }
       }, [tr])
+
+      if (trashView) {
+        return h('div', null,
+          h('style', null, CSS),
+          h(TrashView, {
+            dict,
+            onBack: () => { setTrashView(false); load(undefined, true) },
+          }))
+      }
 
       return h('div', { className: 'skh-page' },
         h('style', null, CSS),
@@ -890,6 +1161,10 @@ window.__ModuleLoader__.load({
           h('button', {
             className: 'skh-refresh', onClick: openFolder, disabled: folderBusy,
           }, folderBusy ? tr('open.folder.busy') : tr('action.openFolder')),
+          h('button', {
+            className: 'skh-refresh', title: tr('trash.toolbarTitle'),
+            onClick: () => setTrashView(true),
+          }, tr('trash.tab')),
           h('button', { className: 'skh-import-btn', onClick: () => setImporting(true) }, tr('action.import'))),
         folderMsg !== null ? h('div', { className: 'skh-note', style: { padding: '8px 24px 0' } }, folderMsg.text) : null,
         h('div', { className: 'skh-tags', 'aria-label': tr('tag.barLabel') },

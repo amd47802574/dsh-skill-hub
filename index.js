@@ -9,6 +9,9 @@
 //   POST /api/dsh-skill-hub.importFolder    -> install skills from a local folder
 //   POST /api/dsh-skill-hub.importGithub    -> install skills from a GitHub repo
 //   POST /api/dsh-skill-hub.openFolder      -> open the user skills root in the OS file manager
+//   GET  /api/dsh-skill-hub.trash           -> { ok, entries, complete } recycle-bin listing
+//   POST /api/dsh-skill-hub.restore         -> move a trashed entry back into the skills root
+//   POST /api/dsh-skill-hub.purge           -> permanently delete one trashed entry
 //
 // Skill data comes from the host `skills` service (`ctx.get('skills')`) at
 // call time; imports write into the DSH user skills root (`$DSH_HOME/skills`,
@@ -230,6 +233,19 @@ function summaryOf(skill) {
   }
 }
 
+/**
+ * Best-effort registry refresh for operations whose result does not depend on
+ * an attached skills service (restore/purge only move files on disk). A
+ * missing service must not fail the file move itself.
+ */
+function touchRegistryIfPresent(ctx) {
+  try {
+    touchRegistry(requireSkills(ctx))
+  } catch {
+    // No skills service in this profile: the watcher picks the move up later.
+  }
+}
+
 /** Resolve the host skills service, or throw a shaped failure. */
 function requireSkills(ctx) {
   const skills = ctx.get('skills')
@@ -442,6 +458,48 @@ export function apply(ctx, config = {}) {
   })
 
   conn.fetch.register({
+    path: '/api/dsh-skill-hub.trash',
+    methods: ['GET', 'HEAD'],
+    requestBody: 'buffered',
+    fetch: async () => {
+      try {
+        const listing = await listTrash()
+        return json({ ok: true, ...listing })
+      } catch (error) {
+        return errorResponse(error)
+      }
+    },
+  })
+
+  conn.fetch.register({
+    path: '/api/dsh-skill-hub.restore',
+    methods: ['POST'],
+    requestBody: 'buffered',
+    fetch: async (request) => {
+      try {
+        const body = await readJsonBody(request)
+        return json(await restoreTrashEntry(body, ctx))
+      } catch (error) {
+        return errorResponse(error)
+      }
+    },
+  })
+
+  conn.fetch.register({
+    path: '/api/dsh-skill-hub.purge',
+    methods: ['POST'],
+    requestBody: 'buffered',
+    fetch: async (request) => {
+      try {
+        const body = await readJsonBody(request)
+        return json(await purgeTrashEntry(body, ctx))
+      } catch (error) {
+        return errorResponse(error)
+      }
+    },
+  })
+
+  conn.fetch.register({
     path: '/api/dsh-skill-hub.openFolder',
     methods: ['POST'],
     requestBody: 'buffered',
@@ -619,6 +677,124 @@ async function deleteManySkills(body, ctx) {
   const trashed = results.filter((r) => r.ok).length
   touchRegistry(requireSkills(ctx))
   return { ok: true, trashed, failed: results.length - trashed, results }
+}
+
+// --- recycle bin -------------------------------------------------------------
+
+/**
+ * Trash entries are flat names under the root's `.trash/` directory:
+ * `<epoch-ms>-<original name>`. The epoch prefix sorts the bin newest-last and
+ * is stripped again on restore, so a skill comes back under its own name.
+ */
+const TRASH_NAME = /^(\d{10,16})-(.+)$/u
+
+function trashRoot() {
+  return join(dshSkillsRoot(), '.trash')
+}
+
+/** Parse a trash entry name; undefined when it does not carry an epoch prefix. */
+function parseTrashName(name) {
+  const match = TRASH_NAME.exec(name)
+  if (match === null) return undefined
+  const at = Number(match[1])
+  if (!Number.isFinite(at)) return undefined
+  return { entry: name, trashedAt: new Date(at).toISOString(), name: match[2] }
+}
+
+/** Read one trashed entry: its parsed name, frontmatter fields and size. */
+async function describeTrashEntry(entry) {
+  const parsed = parseTrashName(entry)
+  if (parsed === undefined) return undefined
+  const path = join(trashRoot(), entry)
+  let declaration = { fields: {} }
+  let isDirectory = false
+  try {
+    const info = await stat(path)
+    isDirectory = info.isDirectory()
+    declaration = isDirectory
+      ? (await parseSkillMarkdown(join(path, SKILL_ENTRY))) ?? { fields: {} }
+      : (await parseSkillMarkdown(path)) ?? { fields: {} }
+  } catch {
+    // A vanished or unreadable entry still deserves a row: it can be purged.
+  }
+  const declared = typeof declaration.fields?.name === 'string' ? declaration.fields.name.trim() : ''
+  return {
+    entry,
+    name: parsed.name,
+    declaredName: declared !== '' && declared !== parsed.name ? declared : undefined,
+    description: typeof declaration.fields?.description === 'string' ? declaration.fields.description.trim() : '',
+    kind: isDirectory ? 'directory' : 'file',
+    trashedAt: parsed.trashedAt,
+    path,
+  }
+}
+
+/** List the recycle bin, newest first. A missing bin is an empty bin. */
+async function listTrash(limit = 500) {
+  let names
+  try {
+    names = await readdir(trashRoot())
+  } catch {
+    return { entries: [], complete: true, root: trashRoot() }
+  }
+  const entries = []
+  for (const name of names) {
+    const described = await describeTrashEntry(name)
+    if (described !== undefined) entries.push(described)
+  }
+  entries.sort((a, b) => (a.trashedAt < b.trashedAt ? 1 : a.trashedAt > b.trashedAt ? -1 : 0))
+  return { entries: entries.slice(0, limit), complete: entries.length <= limit, root: trashRoot() }
+}
+
+/** Resolve one entry inside the bin, refusing anything that escapes it. */
+function resolveTrashEntry(entry) {
+  if (typeof entry !== 'string' || entry.trim() === '') {
+    throw new RouteError(400, 'invalid', 'the entry field must be a recycle-bin entry name')
+  }
+  const name = entry.trim()
+  if (name.includes('/') || name.includes('\\') || name.includes(sep) || name === '.' || name === '..') {
+    throw new RouteError(400, 'invalid', 'the entry field must be a plain recycle-bin entry name')
+  }
+  return join(trashRoot(), name)
+}
+
+/**
+ * Restore one trashed entry to the user skills root. When the original name is
+ * taken again the restore refuses: silently merging two skills would be worse
+ * than a clear conflict.
+ */
+async function restoreTrashEntry(body, ctx) {
+  const from = resolveTrashEntry(body.entry)
+  if (!existsSync(from)) throw new RouteError(404, 'not-found', 'that recycle-bin entry no longer exists')
+  const parsed = parseTrashName(basename(from))
+  if (parsed === undefined) {
+    throw new RouteError(400, 'invalid', 'that entry has no recoverable skill name')
+  }
+  const safe = safeEntryName(parsed.name)
+  if (safe === undefined || !KEBAB_NAME.test(toKebabName(safe))) {
+    throw new RouteError(400, 'invalid', `"${parsed.name}" is not a valid skill entry name`)
+  }
+  const root = dshSkillsRoot()
+  await mkdir(root, { recursive: true })
+  const target = join(root, safe)
+  const occupied = existsSync(target)
+  if (occupied && body.overwrite !== true) {
+    throw new RouteError(409, 'conflict', `a skill named "${safe}" already exists in the skills root; remove it or restore with overwrite`)
+  }
+  if (occupied) await rm(target, { recursive: true, force: true })
+  await rename(from, target)
+  touchRegistryIfPresent(ctx)
+  return { ok: true, restored: safe, path: target }
+}
+
+/** Permanently delete one trashed entry. Irreversible by design. */
+async function purgeTrashEntry(body, ctx) {
+  const target = resolveTrashEntry(body.entry)
+  if (!existsSync(target)) throw new RouteError(404, 'not-found', 'that recycle-bin entry no longer exists')
+  const removed = basename(target)
+  await rm(target, { recursive: true, force: true })
+  touchRegistryIfPresent(ctx)
+  return { ok: true, purged: removed }
 }
 
 export default { apply }
